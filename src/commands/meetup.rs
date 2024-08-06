@@ -1,7 +1,7 @@
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Local, NaiveTime};
 use serenity::{builder::{CreateCommand, CreateCommandOption}, all::{ResolvedOption, CommandOptionType, ResolvedValue}};
 
-pub fn run(options: &[ResolvedOption]) -> String {
+pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) -> String {
     if let Some(ResolvedOption {
         value: ResolvedValue::User(user, _), ..
     }) = options.first() {
@@ -9,8 +9,24 @@ pub fn run(options: &[ResolvedOption]) -> String {
             value: ResolvedValue::String(timestr), ..
         }) = options.get(1) {
             // time formatting goes here
-            let _dt = NaiveDateTime::parse_from_str(timestr, "%H:%M");
-            format!("Meeting with {} at {}", user.name, timestr)
+            let now = Local::now();
+            let today = now.date_naive();
+            let Ok(time) = NaiveTime::parse_from_str(timestr, "%H:%M") else { return "Invalid time string".to_string() };
+            let dt = NaiveDateTime::new(today, time);
+
+            // save the user id timestamp pair to a database
+            let user_str = user.id.get().to_string();
+            let datetime_str = dt.and_utc().to_string();
+            sqlx::query!(
+                "INSERT INTO meetups (user_id, datetime) VALUES (?, ?)",
+                user_str,
+                datetime_str
+            )
+            .execute(database)
+            .await
+            .unwrap();
+
+            format!("Meetup scheduled for {} at {}", user.name, timestr)
         } else {
             "Please provide a time string".to_string()
         }
