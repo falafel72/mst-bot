@@ -21,7 +21,7 @@ pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) ->
 
             // save the user id timestamp pair to a database
             let user_str = user.id.get().to_string();
-            let datetime_str = dt.to_string();
+            let datetime_str = dt.to_rfc3339();
             sqlx::query!(
                 "INSERT INTO meetups (user_id, datetime) VALUES (?, ?)",
                 user_str,
@@ -31,7 +31,7 @@ pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) ->
             .await
             .unwrap();
 
-            format!("Meetup scheduled for {} at {}", user.name, timestr)
+            format!("Meetup scheduled for {} at {}", user.name, datetime_str)
         } else {
             "Please provide a time string".to_string()
         }

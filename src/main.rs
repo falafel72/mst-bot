@@ -2,7 +2,7 @@ mod commands;
 
 use std::env;
 
-use chrono::Local;
+use chrono::{Local, DateTime};
 use serenity::{all::{GatewayIntents, GuildId, Interaction, VoiceState}, Client, async_trait, client::{EventHandler, Context}, builder::{CreateInteractionResponse, CreateInteractionResponseMessage}};
 use serenity::model::gateway::Ready;
 
@@ -33,7 +33,43 @@ impl EventHandler for Bot{
         let user = member.user;
         println!("{} joined at {}", user.name, timestamp.to_rfc3339());
 
-        // todo: retrieve intended join time, calculate difference, and add database entry
+        let user_id = user.id.get().to_string();
+
+        let Ok(intended_join_time) = sqlx::query!(
+            "SELECT datetime FROM meetups WHERE user_id = ?",
+            user_id
+        )
+        .fetch_one(&(self.database))
+        .await else {
+            println!("Entry for this user not found!");
+            return;
+        };
+
+        let Ok(expected_dt) = DateTime::parse_from_rfc3339(&intended_join_time.datetime) else {
+            let db_dt = intended_join_time.datetime;
+            println!("Unable to parse datetime stored in database: {db_dt}");
+            return;
+        };
+        let timestamp_diff = timestamp.timestamp() - expected_dt.timestamp();
+        println!("Timestamp difference: {timestamp_diff}");
+
+        // remove the entry from the database
+        sqlx::query!(
+            "DELETE FROM meetups WHERE user_id = ?",
+            user_id
+        )
+        .execute(&(self.database))
+        .await
+        .unwrap();
+
+        sqlx::query!(
+           "INSERT INTO delays (user_id, delay_seconds) VALUES (?, ?)",
+            user_id,
+            timestamp_diff
+        )
+        .execute(&(self.database))
+        .await
+        .unwrap();
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -87,7 +123,7 @@ async fn main() {
         .max_connections(5)
         .connect_with(
             sqlx::sqlite::SqliteConnectOptions::new()
-                .filename("database.sqlite")
+                .filename("database.db")
                 .create_if_missing(true)
         )
         .await
