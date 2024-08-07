@@ -2,7 +2,8 @@ mod commands;
 
 use std::env;
 
-use serenity::{all::{GatewayIntents, GuildId, Interaction}, Client, async_trait, client::{EventHandler, Context}, builder::{CreateInteractionResponse, CreateInteractionResponseMessage}};
+use chrono::Local;
+use serenity::{all::{GatewayIntents, GuildId, Interaction, VoiceState}, Client, async_trait, client::{EventHandler, Context}, builder::{CreateInteractionResponse, CreateInteractionResponseMessage}};
 use serenity::model::gateway::Ready;
 
 struct Bot {
@@ -11,6 +12,30 @@ struct Bot {
 
 #[async_trait]
 impl EventHandler for Bot{
+    async fn voice_state_update(&self,
+                                _ctx: Context,
+                                old: Option<VoiceState>,
+                                new: VoiceState) {
+        // if the old VoiceState is not None, we can ignore the event
+        if old.is_some() {
+            println!("User was in a voice chat already.");
+            return;
+        };
+
+        let Some(member) = new.member else {
+            println!("Member invalid!");
+            return;
+        };
+
+        // ensure the timestamp is in utc format
+        let timestamp = Local::now();
+
+        let user = member.user;
+        println!("{} joined at {}", user.name, timestamp.to_rfc3339());
+
+        // todo: retrieve intended join time, calculate difference, and add database entry
+    }
+
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
        if let Interaction::Command(command) = interaction {
            println!("Received command interaction: {command:#?}");
@@ -55,6 +80,8 @@ async fn main() {
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
+    let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES;
+
     // create database
     let database = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
@@ -72,7 +99,7 @@ async fn main() {
         database,
     };
 
-    let mut client = Client::builder(&token, GatewayIntents::empty())
+    let mut client = Client::builder(&token, intents)
         .event_handler(bot)
         .await
         .expect("Error creating client");

@@ -11,12 +11,17 @@ pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) ->
             // time formatting goes here
             let now = Local::now();
             let today = now.date_naive();
-            let Ok(time) = NaiveTime::parse_from_str(timestr, "%H:%M") else { return "Invalid time string".to_string() };
-            let dt = NaiveDateTime::new(today, time);
+            let Ok(time) = NaiveTime::parse_from_str(timestr, "%H:%M") else {
+                return "Invalid time string".to_string()
+            };
+
+            let Some(dt) = NaiveDateTime::new(today, time).and_local_timezone(Local).single() else {
+               return "Unable to create datetime".to_string()
+            };
 
             // save the user id timestamp pair to a database
             let user_str = user.id.get().to_string();
-            let datetime_str = dt.and_utc().to_string();
+            let datetime_str = dt.to_string();
             sqlx::query!(
                 "INSERT INTO meetups (user_id, datetime) VALUES (?, ?)",
                 user_str,
