@@ -78,6 +78,7 @@ impl EventHandler for Bot{
 
            let content = match command.data.name.as_str() {
                "meetup" => Some(commands::meetup::run(&command.data.options(), &(self.database)).await),
+               "mst" => Some(commands::mst::run(&command.data.options(), &(self.database)).await),
                _ => Some("not implemented :(".to_string()),
            };
 
@@ -103,7 +104,8 @@ impl EventHandler for Bot{
 
         let commands = guild_id
             .set_commands(&ctx.http, vec![
-               commands::meetup::register()
+                commands::meetup::register(),
+                commands::mst::register()
             ])
             .await;
 
