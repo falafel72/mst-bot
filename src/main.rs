@@ -80,6 +80,7 @@ impl EventHandler for Bot{
                "meetup" => Some(commands::meetup::run(&command.data.options(), &(self.database)).await),
                "mst" => Some(commands::mst::run(&command.data.options(), &(self.database)).await),
                "estimate" => Some(commands::estimate::run(&command.data.options(), &(self.database)).await),
+               "cancel" => Some(commands::cancel::run(&command.data.options(), &(self.database)).await),
                _ => Some("not implemented :(".to_string()),
            };
 
@@ -107,7 +108,8 @@ impl EventHandler for Bot{
             .set_commands(&ctx.http, vec![
                 commands::meetup::register(),
                 commands::mst::register(),
-                commands::estimate::register()
+                commands::estimate::register(),
+                commands::cancel::register()
             ])
             .await;
 
