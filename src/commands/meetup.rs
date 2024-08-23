@@ -31,7 +31,7 @@ pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) ->
             .await
             .unwrap();
 
-            format!("Meetup scheduled for {} at {}", user.name, datetime_str)
+            format!("Meetup scheduled for <@{}> at {}", user_str, datetime_str)
         } else {
             "Please provide a time string".to_string()
         }

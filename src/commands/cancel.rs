@@ -18,7 +18,7 @@ pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) ->
     .await
     .unwrap();
 
-    format!("Canceled meetup with {}.", user.name)
+    format!("Canceled meetup with <@{}>", user.id.get())
 }
 
 pub fn register() -> CreateCommand {
