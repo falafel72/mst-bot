@@ -2,7 +2,7 @@ mod commands;
 
 use std::env;
 
-use chrono::{Local, DateTime};
+use chrono::Local;
 use serenity::{all::{GatewayIntents, GuildId, Interaction, VoiceState}, Client, async_trait, client::{EventHandler, Context}, builder::{CreateInteractionResponse, CreateInteractionResponseMessage}};
 use serenity::model::gateway::Ready;
 
@@ -27,16 +27,13 @@ impl EventHandler for Bot{
             return;
         };
 
-        // ensure the timestamp is in utc format
-        let timestamp = Local::now();
-
+        let dt = Local::now();
         let user = member.user;
-        println!("{} joined at {}", user.name, timestamp.to_rfc3339());
-
+        println!("{} joined at {}", user.name, dt.to_rfc3339());
         let user_id = user.id.get().to_string();
 
         let Ok(intended_join_time) = sqlx::query!(
-            "SELECT datetime FROM meetups WHERE user_id = ?",
+            "SELECT datetime_unix FROM meetups WHERE user_id = ?",
             user_id
         )
         .fetch_one(&(self.database))
@@ -45,12 +42,8 @@ impl EventHandler for Bot{
             return;
         };
 
-        let Ok(expected_dt) = DateTime::parse_from_rfc3339(&intended_join_time.datetime) else {
-            let db_dt = intended_join_time.datetime;
-            println!("Unable to parse datetime stored in database: {db_dt}");
-            return;
-        };
-        let timestamp_diff = timestamp.timestamp() - expected_dt.timestamp();
+        let expected_timestamp = &intended_join_time.datetime_unix;
+        let timestamp_diff = dt.timestamp() - expected_timestamp;
         println!("Timestamp difference: {timestamp_diff}");
 
         // remove the entry from the database
