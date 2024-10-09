@@ -3,9 +3,10 @@ mod commands;
 use std::env;
 
 use chrono::Local;
+use serenity::model::application::Command;
 use serenity::model::gateway::Ready;
 use serenity::{
-    all::{GatewayIntents, GuildId, Interaction, VoiceState},
+    all::{GatewayIntents, Interaction, VoiceState},
     async_trait,
     builder::{CreateInteractionResponse, CreateInteractionResponseMessage},
     client::{Context, EventHandler},
@@ -30,10 +31,16 @@ impl EventHandler for Bot {
             return;
         };
 
+        let Some(guild_id) = new.guild_id else {
+            println!("Voice channel in a DM!");
+            return;
+        };
+
         let dt = Local::now();
         let user = member.user;
         println!("{} joined at {}", user.name, dt.to_rfc3339());
         let user_id = user.id.get().to_string();
+        let guild_id_str = guild_id.get().to_string();
 
         let Ok(intended_join_time) = sqlx::query!(
             "SELECT datetime_unix FROM meetups WHERE user_id = ?",
@@ -51,15 +58,20 @@ impl EventHandler for Bot {
         println!("Timestamp difference: {timestamp_diff}");
 
         // remove the entry from the database
-        sqlx::query!("DELETE FROM meetups WHERE user_id = ?", user_id)
-            .execute(&(self.database))
-            .await
-            .unwrap();
+        sqlx::query!(
+            "DELETE FROM meetups WHERE user_id = ? AND guild_id = ?",
+            user_id,
+            guild_id_str
+        )
+        .execute(&(self.database))
+        .await
+        .unwrap();
 
         sqlx::query!(
-            "INSERT INTO delays (user_id, delay_seconds) VALUES (?, ?)",
+            "INSERT INTO delays (user_id, delay_seconds, guild_id) VALUES (?, ?, ?)",
             user_id,
-            timestamp_diff
+            timestamp_diff,
+            guild_id_str
         )
         .execute(&(self.database))
         .await
@@ -70,17 +82,42 @@ impl EventHandler for Bot {
         if let Interaction::Command(command) = interaction {
             println!("Received command interaction: {command:#?}");
 
+            // extract the guild id, otherwise is a dm?
+            let Some(guild_id) = command.guild_id else {
+                println!("This command doesn't work in dms!");
+                return;
+            };
+
             let content = match command.data.name.as_str() {
-                "meetup" => {
-                    Some(commands::meetup::run(&command.data.options(), &(self.database)).await)
-                }
-                "mst" => Some(commands::mst::run(&command.data.options(), &(self.database)).await),
-                "estimate" => {
-                    Some(commands::estimate::run(&command.data.options(), &(self.database)).await)
-                }
-                "cancel" => {
-                    Some(commands::cancel::run(&command.data.options(), &(self.database)).await)
-                }
+                "meetup" => Some(
+                    commands::meetup::run(
+                        &command.data.options(),
+                        &(self.database),
+                        guild_id.get(),
+                    )
+                    .await,
+                ),
+                "mst" => Some(
+                    commands::mst::run(&command.data.options(), &(self.database), guild_id.get())
+                        .await,
+                ),
+                "estimate" => Some(
+                    commands::estimate::run(
+                        &command.data.options(),
+                        &(self.database),
+                        guild_id.get(),
+                    )
+                    .await,
+                ),
+                "cancel" => Some(
+                    commands::cancel::run(
+                        &command.data.options(),
+                        &(self.database),
+                        guild_id.get(),
+                    )
+                    .await,
+                ),
+                "ping" => Some(commands::ping::run()),
                 _ => Some("not implemented :(".to_string()),
             };
 
@@ -97,26 +134,11 @@ impl EventHandler for Bot {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
 
-        let guild_id = GuildId::new(
-            env::var("GUILD_ID")
-                .expect("Expected GUILD_ID in environment")
-                .parse()
-                .expect("GUILD_ID must be an integer"),
-        );
-
-        let commands = guild_id
-            .set_commands(
-                &ctx.http,
-                vec![
-                    commands::meetup::register(),
-                    commands::mst::register(),
-                    commands::estimate::register(),
-                    commands::cancel::register(),
-                ],
-            )
-            .await;
-
-        println!("I have the following guild slash commands: {commands:#?}");
+        let _ = Command::create_global_command(&ctx.http, commands::ping::register()).await;
+        let _ = Command::create_global_command(&ctx.http, commands::meetup::register()).await;
+        let _ = Command::create_global_command(&ctx.http, commands::mst::register()).await;
+        let _ = Command::create_global_command(&ctx.http, commands::estimate::register()).await;
+        let _ = Command::create_global_command(&ctx.http, commands::cancel::register()).await;
     }
 }
 

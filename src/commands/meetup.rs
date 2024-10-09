@@ -4,7 +4,11 @@ use serenity::{
     builder::{CreateCommand, CreateCommandOption},
 };
 
-pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) -> String {
+pub async fn run(
+    options: &[ResolvedOption<'_>],
+    database: &sqlx::SqlitePool,
+    guild_id: u64,
+) -> String {
     let Some(ResolvedOption {
         value: ResolvedValue::User(user, _),
         ..
@@ -38,10 +42,12 @@ pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) ->
     // save the user id timestamp pair to a database
     let user_str = user.id.get().to_string();
     let timestamp = dt.timestamp();
+    let guild_id_str = guild_id.to_string();
     sqlx::query!(
-        "INSERT INTO meetups (user_id, datetime_unix) VALUES (?, ?)",
+        "INSERT INTO meetups (user_id, datetime_unix, guild_id) VALUES (?, ?, ?)",
         user_str,
-        timestamp
+        timestamp,
+        guild_id_str
     )
     .execute(database)
     .await

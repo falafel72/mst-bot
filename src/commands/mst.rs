@@ -3,7 +3,11 @@ use serenity::{
     builder::{CreateCommand, CreateCommandOption},
 };
 
-pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) -> String {
+pub async fn run(
+    options: &[ResolvedOption<'_>],
+    database: &sqlx::SqlitePool,
+    guild_id: u64,
+) -> String {
     let Some(ResolvedOption {
         value: ResolvedValue::User(user, _),
         ..
@@ -13,15 +17,21 @@ pub async fn run(options: &[ResolvedOption<'_>], database: &sqlx::SqlitePool) ->
     };
 
     let user_id = user.id.get().to_string();
+    let guild_id_str = guild_id.to_string();
 
-    let Ok(delay_times) = sqlx::query!("SELECT * FROM delays WHERE user_id = ?", user_id)
-        .fetch_all(database)
-        .await
+    // we check if a guild id exists or is null to preserve backwards compatibility
+    let Ok(delay_times) = sqlx::query!(
+        "SELECT * FROM delays WHERE user_id = ? AND (guild_id = ? OR guild_id IS NULL)",
+        user_id,
+        guild_id_str
+    )
+    .fetch_all(database)
+    .await
     else {
         return "No data for this user found!".to_string();
     };
 
-    if delay_times.len() == 0 {
+    if delay_times.is_empty() {
         return "No data for this user found!".to_string();
     }
 
