@@ -90,14 +90,38 @@
               })
         );
         cranePackages = lib.attrsets.genAttrs systemsToBuildFor (system: generateCranePackage system);
+        dockerImagesForSystem =
+          map (crossSystem: let
+            pkgs = import nixpkgs {
+              inherit localSystem crossSystem;
+              overlays = [(import rust-overlay)];
+            };
+          in {
+            name = "docker-${crossSystem}";
+            value = pkgs.pkgsHostHost.dockerTools.streamLayeredImage {
+              name = "mst-bot";
+              tag = "latest";
+              contents = with pkgs.pkgsHostHost; [cranePackages."${crossSystem}" cacert];
+              config = {
+                Cmd = ["${cranePackages."${crossSystem}"}/bin/mst-bot"];
+              };
+            };
+          })
+          systemsToBuildFor;
+        dockerImages = builtins.listToAttrs dockerImagesForSystem;
       in {
-        checks = cranePackages // {
-          default = cranePackages."${localSystem}";
-        };
+        checks =
+          cranePackages
+          // {
+            default = cranePackages."${localSystem}";
+          };
 
-        packages = cranePackages // {
-          default = cranePackages."${localSystem}";
-        };
+        packages =
+          cranePackages
+          // dockerImages
+          // {
+            default = cranePackages."${localSystem}";
+          };
 
         devShells.default = craneLib.devShell {
           checks = self.checks.${localSystem};
