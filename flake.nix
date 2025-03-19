@@ -124,7 +124,7 @@
           };
 
         devShells.default = craneLib.devShell {
-          checks = self.checks.${localSystem};
+          checks = self.checks;
           packages = with pkgs; [
             sqlx-cli
             ripgrep
