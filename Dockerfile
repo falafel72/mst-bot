@@ -1,4 +1,5 @@
 FROM lukemathwalker/cargo-chef:latest AS chef
+RUN cargo install sqlx-cli
 WORKDIR /app
 
 FROM chef AS planner
@@ -9,7 +10,9 @@ FROM chef AS builder
 COPY --from=planner /app/recipe.json .
 RUN cargo chef cook --release
 COPY . .
-ENV SQLX_OFFLINE=true
+ENV DATABASE_URL=sqlite:./database.db
+RUN sqlx database create
+RUN sqlx migrate run
 RUN cargo build --release
 RUN mv ./target/release/mst-bot ./app
 
