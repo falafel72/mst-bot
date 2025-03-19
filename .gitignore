@@ -1,2 +1,4 @@
 /target
 result
+database.db
+.env

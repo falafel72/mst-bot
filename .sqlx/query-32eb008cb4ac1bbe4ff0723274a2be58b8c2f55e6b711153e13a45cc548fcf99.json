@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM delays WHERE user_id = ? AND (guild_id = ? OR guild_id IS NULL)",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "delay_seconds",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "guild_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "32eb008cb4ac1bbe4ff0723274a2be58b8c2f55e6b711153e13a45cc548fcf99"
+}
