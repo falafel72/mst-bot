@@ -1,0 +1,73 @@
+name: MST-Bot CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  actions: write
+
+env:
+  nix_conf: |
+    keep-env-derivations = true
+    keep-outputs = true
+
+jobs:
+  check:
+    strategy:
+      matrix:
+        arch: ["x86_64-linux", "aarch64-linux", "aarch64-darwin"]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nixbuild/nix-quick-install-action@v30
+        with:
+          nix_conf: ${{ env.nix_conf }}
+      - uses: nix-community/cache-nix-action@v6
+        with:
+          # restore and save a cache using this key
+          primary-key: nix-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          # if there's no cache hit, restore a cache by this prefix
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          # TTL 1 week
+          purge-created: 604800
+          purge-primary-key: never
+      - name: "Run checks"
+        run: nix check .#${{ matrix.arch }}
+  build:
+    name: "Build and Push Docker Image"
+    needs: check
+    strategy:
+      matrix:
+        arch: ["x86_64-linux", "aarch64-linux", "aarch64-darwin"]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nixbuild/nix-quick-install-action@v30
+        with:
+          nix_conf: ${{ env.nix_conf }}
+      - uses: nix-community/cache-nix-action@v6
+        with:
+          # restore and save a cache using this key
+          primary-key: nix-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          # if there's no cache hit, restore a cache by this prefix
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          # TTL 1 week
+          purge-created: 604800
+          purge-primary-key: never
+      - name: "Build Docker image"
+        run: nix build .#docker-${{ matrix.arch }}
+      - name: "Load Docker image"
+        run: |
+          ./result | docker load
+          docker tag mst-bot:latest ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-${{ github.sha::0:7 }}
+          docker push ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-${{ github.sha::0:7 }}
+          docker tag mst-bot:latest ghcr.io/falafel72/mst-bot:latest
+          docker push ghcr.io/falafel72/mst-bot:latest
