@@ -64,7 +64,7 @@ jobs:
           purge-primary-key: never
       - name: "Build Docker image"
         run: nix build .#docker-${{ matrix.arch }}
-      - name: "Load Docker image"
+      - name: "Load & Push Docker image"
         run: |
           ./result | docker load
           docker tag mst-bot:latest ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-${{ github.sha::0:7 }}
