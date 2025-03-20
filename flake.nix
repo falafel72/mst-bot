@@ -89,7 +89,11 @@
                 '';
               })
         );
-        cranePackages = lib.attrsets.genAttrs systemsToBuildFor (system: generateCranePackage system);
+        # Filter the available cross-compilation system for x86_64-linux and aarch64-linux
+        # to exclude macOS packages. Unfortunately, certain libraries are unavailable when
+        # cross-compiling for macOS.
+        availableSystems = if localSystem != "aarch64-darwin" then builtins.filter (x: x != "aarch64-darwin") systemsToBuildFor else systemsToBuildFor;
+        cranePackages = lib.attrsets.genAttrs availableSystems (system: generateCranePackage system);
         dockerImagesForSystem =
           map (crossSystem: let
             pkgs = import nixpkgs {
@@ -107,7 +111,7 @@
               };
             };
           })
-          systemsToBuildFor;
+          availableSystems;
         dockerImages = builtins.listToAttrs dockerImagesForSystem;
       in {
         checks =
