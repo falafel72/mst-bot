@@ -66,6 +66,7 @@ jobs:
   push-docker:
     name: "Push Docker Image"
     needs: build
+    if: github.ref == 'refs/heads/main'
     strategy:
       matrix:
         arch: ["x86_64-linux", "aarch64-linux"]
@@ -105,6 +106,7 @@ jobs:
   set-docker-tags:
     name: "Set Docker Image Manifests"
     needs: push-docker
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
