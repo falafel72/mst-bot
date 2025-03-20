@@ -37,7 +37,7 @@ jobs:
           purge-created: 604800
           purge-primary-key: never
       - name: "Run checks"
-        run: nix check .#${{ matrix.arch }}
+        run: nix flake check
   build:
     name: "Build and Push Docker Image"
     needs: check
