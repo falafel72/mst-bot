@@ -93,7 +93,6 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: "Load & Push Docker image"
         run: |
-          set -x
           GITHUB_SHA=$(echo ${{ github.sha }} | cut -c 1-7)
           ./result | docker load
           SHA_IMAGE_REPO="ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-$GITHUB_SHA"
