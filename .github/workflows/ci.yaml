@@ -43,7 +43,7 @@ jobs:
     needs: check
     strategy:
       matrix:
-        arch: ["x86_64-linux", "aarch64-linux", "aarch64-darwin"]
+        arch: ["x86_64-linux", "aarch64-linux"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -66,8 +66,19 @@ jobs:
         run: nix build .#docker-${{ matrix.arch }}
       - name: "Load & Push Docker image"
         run: |
+          GITHUB_SHA=$(echo ${{ github.sha }} | cut -c 1-7)
           ./result | docker load
-          docker tag mst-bot:latest ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-${{ github.sha::0:7 }}
-          docker push ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-${{ github.sha::0:7 }}
-          docker tag mst-bot:latest ghcr.io/falafel72/mst-bot:latest
-          docker push ghcr.io/falafel72/mst-bot:latest
+          SHA_IMAGE_REPO="ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-$GITHUB_SHA
+          LATEST_ARCH_IMAGE_REPO="ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-latest
+          LATEST_IMAGE_REPO="ghcr.io/falafel72/mst-bot:latest"
+          if [[ "${{ matrix.arch }}" == "x86_64-linux" ]]; then
+            ARCH="amd64"
+          else
+            ARCH="arm64"
+          fi
+          docker tag mst-bot:latest $SHA_IMAGE_REPO 
+          docker tag mst-bot:latest $LATEST_ARCH_IMAGE_REPO
+          docker push $SHA_IMAGE_REPO
+          docker push $LATEST_ARCH_IMAGE_REPO
+          docker manifest create $LATEST_IMAGE_REPO $LATEST_ARCH_IMAGE_REPO $LATEST_IMAGE_REPO@$(docker manifest inspect $LATEST_IMAGE_REPO | jq ".manifests[] | select(.platform.architecture != \"$ARCH\") | .digest" | tr -d \")
+          docker manifest push $LATEST_IMAGE_REPO
