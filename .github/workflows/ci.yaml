@@ -112,5 +112,5 @@ jobs:
             docker tag "$LATEST_ARCH_IMAGE_REPO" "$LATEST_IMAGE_REPO"
             docker push "$LATEST_IMAGE_REPO"
           fi
-          docker manifest create "$LATEST_IMAGE_REPO" "$LATEST_ARCH_IMAGE_REPO" "ghcr.io/falafel72/mst-bot:x86_64-linux-latest"
+          docker manifest create "$LATEST_IMAGE_REPO" "$LATEST_ARCH_IMAGE_REPO" "$LATEST_IMAGE_REPO"@$(docker manifest inspect "$LATEST_IMAGE_REPO" | jq ".manifests[] | select(.platform.architecture != \"$ARCH\") | .digest" | tr -d \")
           docker manifest push "$LATEST_IMAGE_REPO"
