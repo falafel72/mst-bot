@@ -38,11 +38,36 @@ jobs:
           purge-created: 604800
           purge-primary-key: never
       - name: "Run checks"
-        run: nix flake check
+        run: nix flake check --no-build
   build:
-    name: "Build and Push Docker Image"
+    name: "Build"
     needs: check
-    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        arch: ["x86_64-linux", "aarch64-linux"]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nixbuild/nix-quick-install-action@v30
+        with:
+          nix_conf: ${{ env.nix_conf }}
+      - uses: nix-community/cache-nix-action@v6
+        with:
+          # restore and save a cache using this key
+          primary-key: nix-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          # if there's no cache hit, restore a cache by this prefix
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          # TTL 1 week
+          purge-created: 604800
+          purge-primary-key: never
+      - name: "Build package"
+        run: nix build .#${{ matrix.arch }}
+  push-docker:
+    name: "Push Docker Image"
+    needs: build
     strategy:
       matrix:
         arch: ["x86_64-linux", "aarch64-linux"]
