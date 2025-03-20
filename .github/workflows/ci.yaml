@@ -98,14 +98,19 @@ jobs:
           SHA_IMAGE_REPO="ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-$GITHUB_SHA"
           LATEST_ARCH_IMAGE_REPO="ghcr.io/falafel72/mst-bot:${{ matrix.arch }}-latest"
           LATEST_IMAGE_REPO="ghcr.io/falafel72/mst-bot:latest"
-          if [[ "${{ matrix.arch }}" == "x86_64-linux" ]]; then
-            ARCH="amd64"
-          else
-            ARCH="arm64"
-          fi
           docker tag mst-bot:latest "$SHA_IMAGE_REPO"
           docker tag mst-bot:latest "$LATEST_ARCH_IMAGE_REPO"
           docker push "$SHA_IMAGE_REPO"
           docker push "$LATEST_ARCH_IMAGE_REPO"
-          docker manifest create "$LATEST_IMAGE_REPO" "$LATEST_ARCH_IMAGE_REPO" "$LATEST_IMAGE_REPO"@$(docker manifest inspect "$LATEST_IMAGE_REPO" | jq ".manifests[] | select(.platform.architecture != \"$ARCH\") | .digest" | tr -d \")
-          docker manifest push "$LATEST_IMAGE_REPO"
+  set-docker-tags:
+    name: "Set Docker Image Manifests"
+    needs: push-docker
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Login to GHCR"
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: "Setup latest image manifest"
+        run: |
+          docker manifest create "ghcr.io/falafel72/mst-bot:latest" "ghcr.io/falafel72/mst-bot:x86_64-linux-latest" "ghcr.io/falafel72/mst-bot:aarch64-linux-latest"
+          docker manifest push "ghcr.io/falafel72/mst-bot:latest"
