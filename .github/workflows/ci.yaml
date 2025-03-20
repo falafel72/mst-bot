@@ -87,7 +87,7 @@ jobs:
           purge: true
           purge-prefixes: nix-${{ runner.os }}-
           # TTL 1 week
-          purge-created: 604800
+          purge-created: 3600
           purge-primary-key: never
       - name: "Build Docker image"
         run: nix build .#docker-${{ matrix.arch }}
