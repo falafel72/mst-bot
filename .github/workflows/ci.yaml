@@ -35,6 +35,8 @@ jobs:
           gc-max-store-size-linux: 5G
           purge: true
           purge-prefixes: nix-${{ runner.os }}-
+          # Do not override the build cache
+          save: false
           # TTL 1 week
           purge-created: 604800
           purge-primary-key: never
