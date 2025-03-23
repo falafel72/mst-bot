@@ -92,7 +92,10 @@
         # Filter the available cross-compilation system for x86_64-linux and aarch64-linux
         # to exclude macOS packages. Unfortunately, certain libraries are unavailable when
         # cross-compiling for macOS.
-        availableSystems = if localSystem != "aarch64-darwin" then builtins.filter (x: x != "aarch64-darwin") systemsToBuildFor else systemsToBuildFor;
+        availableSystems =
+          if localSystem != "aarch64-darwin"
+          then builtins.filter (x: x != "aarch64-darwin") systemsToBuildFor
+          else systemsToBuildFor;
         cranePackages = lib.attrsets.genAttrs availableSystems (system: generateCranePackage system);
         dockerImagesForSystem =
           map (crossSystem: let
@@ -105,7 +108,15 @@
             value = pkgs.pkgsHostHost.dockerTools.streamLayeredImage {
               name = "mst-bot";
               tag = "latest";
-              contents = with pkgs.pkgsHostHost; [cranePackages."${crossSystem}" cacert];
+              contents = with pkgs.pkgsHostHost; [
+                cranePackages."${crossSystem}"
+                cacert
+                (pkgs.buildEnv
+                {
+                  name = "mst-bot-migrations";
+                  paths = [./migrations];
+                })
+              ];
               config = {
                 Cmd = ["${cranePackages."${crossSystem}"}/bin/mst-bot"];
               };
