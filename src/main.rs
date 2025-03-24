@@ -145,8 +145,8 @@ impl EventHandler for Bot {
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    let migrations_path = env::var("MIGRATIONS_PATH").unwrap_or("./migrations");
-    let database_url = env::var("DATABASE_URL").unwrap_or("database.db");
+    let migrations_path = env::var("MIGRATIONS_PATH").unwrap_or("./migrations".to_string());
+    let database_url = env::var("DATABASE_URL").unwrap_or("database.db".to_string());
 
     let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES;
 
