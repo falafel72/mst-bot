@@ -145,6 +145,8 @@ impl EventHandler for Bot {
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    let migrations_path = env::var("MIGRATIONS_PATH").unwrap_or("./migrations");
+    let database_url = env::var("DATABASE_URL").unwrap_or("database.db");
 
     let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES;
 
@@ -153,13 +155,13 @@ async fn main() {
         .max_connections(5)
         .connect_with(
             sqlx::sqlite::SqliteConnectOptions::new()
-                .filename("database.db")
+                .filename(database_url)
                 .create_if_missing(true),
         )
         .await
         .expect("Couldn't connect to database");
 
-    sqlx::migrate!("./migrations")
+    sqlx::migrate!(migrations_path)
         .run(&database)
         .await
         .expect("Couldn't run database migrations");
