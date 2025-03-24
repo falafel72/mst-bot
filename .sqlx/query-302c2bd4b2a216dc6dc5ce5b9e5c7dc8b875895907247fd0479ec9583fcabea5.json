@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT datetime_unix FROM meetups WHERE user_id = ? AND guild_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "datetime_unix",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "302c2bd4b2a216dc6dc5ce5b9e5c7dc8b875895907247fd0479ec9583fcabea5"
+}

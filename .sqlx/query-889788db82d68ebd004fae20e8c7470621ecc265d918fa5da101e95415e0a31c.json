@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO delays (user_id, delay_seconds, guild_id) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "889788db82d68ebd004fae20e8c7470621ecc265d918fa5da101e95415e0a31c"
+}
