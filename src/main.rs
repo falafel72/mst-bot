@@ -145,8 +145,7 @@ impl EventHandler for Bot {
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    let migrations_path = env::var("MIGRATIONS_PATH").unwrap_or("./migrations");
-    let database_url = env::var("DATABASE_URL").unwrap_or("database.db");
+    let database_url = env::var("DATABASE_URL").unwrap_or("database.db".to_string());
 
     let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES;
 
@@ -161,7 +160,7 @@ async fn main() {
         .await
         .expect("Couldn't connect to database");
 
-    sqlx::migrate!(migrations_path)
+    sqlx::migrate!("./migrations")
         .run(&database)
         .await
         .expect("Couldn't run database migrations");
