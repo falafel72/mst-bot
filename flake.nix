@@ -111,11 +111,6 @@
               contents = with pkgs.pkgsHostHost; [
                 cranePackages."${crossSystem}"
                 cacert
-                (pkgs.buildEnv
-                {
-                  name = "mst-bot-migrations";
-                  paths = [./migrations];
-                })
               ];
               config = {
                 Cmd = ["${cranePackages."${crossSystem}"}/bin/mst-bot"];
