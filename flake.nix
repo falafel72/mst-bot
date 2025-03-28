@@ -111,6 +111,7 @@
               contents = with pkgs.pkgsHostHost; [
                 cranePackages."${crossSystem}"
                 cacert
+                tzdata
               ];
               config = {
                 Cmd = ["${cranePackages."${crossSystem}"}/bin/mst-bot"];
